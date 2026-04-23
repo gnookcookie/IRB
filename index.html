@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>IRB 생명윤리 모의심의 OX 타임어택</title>
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --success-color: #2ECC71;
+            --danger-color: #E74C3C;
+            --bg-color: #F5F7FA;
+            --card-bg: #FFFFFF;
+            --text-color: #333333;
+        }
+        body {
+            font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+        #quiz-container {
+            width: 100%;
+            max-width: 500px;
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1;
+        }
+        #header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        #card {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.05);
+            padding: 40px 20px;
+            text-align: center;
+            min-height: 150px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+            font-weight: 600;
+            line-height: 1.5;
+            margin-bottom: 30px;
+            word-break: keep-all;
+        }
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .ox-btn {
+            flex: 1;
+            padding: 30px 0;
+            font-size: 3rem;
+            font-weight: bold;
+            border: none;
+            border-radius: 15px;
+            color: white;
+            cursor: pointer;
+            transition: transform 0.1s, opacity 0.2s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        .ox-btn:active {
+            transform: scale(0.95);
+        }
+        #btn-o { background-color: var(--primary-color); }
+        #btn-x { background-color: var(--danger-color); }
+        
+        #feedback {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        #result-text {
+            font-size: 1.8rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .correct { color: var(--success-color); }
+        .incorrect { color: var(--danger-color); }
+        
+        #explanation {
+            background-color: #E8F4F8;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            width: 100%;
+            box-sizing: border-box;
+            text-align: left;
+        }
+        .action-btn {
+            width: 100%;
+            padding: 18px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: white;
+            background-color: var(--text-color);
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        #completion {
+            display: none;
+            text-align: center;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+        }
+        #completion h1 { color: var(--success-color); font-size: 2rem;}
+        #completion p { font-size: 1.2rem; margin-bottom: 30px; line-height: 1.5; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="quiz-container">
+    <div id="header">
+        <span>IRB 퀴즈 타임어택</span>
+        <span id="counter">남은 문제: -</span>
+    </div>
+
+    <div id="card">질문을 불러오는 중입니다...</div>
+
+    <div class="btn-group" id="ox-buttons">
+        <button class="ox-btn" id="btn-o" onclick="checkAnswer('O')">O</button>
+        <button class="ox-btn" id="btn-x" onclick="checkAnswer('X')">X</button>
+    </div>
+
+    <div id="feedback">
+        <div id="result-text"></div>
+        <div id="explanation"></div>
+        <button class="action-btn" onclick="nextQuestion()">다음 문제로</button>
+    </div>
+
+    <div id="completion">
+        <h1>🎉 마스터 완료!</h1>
+        <p>준비하신 모든 문제를 완벽하게 숙지하셨습니다.<br>금요일 모의심의와 퀴즈 시험의 만점을 기원합니다!</p>
+        <button class="action-btn" onclick="startQuiz()">새로고침 없이 다시 시작하기</button>
+    </div>
+</div>
+
+<script>
+    const originalQuestions = [
+        // --- 교재 기반 족보 32문제 ---
+        { q: '“대학생의 휴대폰 사용과 심리적 스트레스간의 관계에 대한 설문 조사연구”는 생명윤리 및 안전에 관한 법률에 적용된다.', a: 'O', exp: '인간을 대상으로 하는 연구(설문조사 포함)이므로 적용 대상입니다.' },
+        { q: '“휴대폰 전자파에 장기간 노출된 대학생의 혈액을 채취하여 유전자를 분석하는 연구”는 생명윤리 및 안전에 관한 법률에 적용된다.', a: 'O', exp: '인체유래물 연구에 해당하므로 심의 대상입니다.' },
+        { q: '“혈액채취를 하지 않지만 개인식별정보가 있는 연구”는 IRB 심의를 받아야 한다.', a: 'O', exp: '개인식별정보가 포함된 인간 대상 연구는 반드시 심의를 받아야 합니다.' },
+        { q: '설문조사 연구인 경우 IRB 심의를 받을 필요가 없다.', a: 'X', exp: '설문조사 연구도 인간 대상 연구이므로 심의 대상입니다. (면제 여부는 IRB가 판단)' },
+        { q: '연구대상자의 이름은 개인식별정보이다.', a: 'O', exp: '이름은 특정 개인을 알아볼 수 있는 대표적인 개인식별정보입니다.' },
+        { q: '연구대상자의 연령은 개인식별정보이다.', a: 'X', exp: '나이(연령)만으로는 누군지 특정할 수 없으므로 개인식별정보가 아닙니다.' },
+        { q: '연구대상자의 전화번호는 개인식별정보이다.', a: 'O', exp: '전화번호는 개인을 특정할 수 있는 정보입니다.' },
+        { q: '연구대상자의 생년월일은 개인식별정보이다.', a: 'O', exp: '생년월일 역시 다른 정보와 결합하여 식별 가능성이 높은 식별정보입니다.' },
+        { q: '국민건강영양조사와 같이 개인식별정보가 제거된 자료를 이차분석하는 연구인 경우 심의를 받을 필요가 없다.', a: 'X', exp: '기존 공공데이터 분석이더라도 기관생명윤리위원회의 심의 면제 승인 절차를 받아야 합니다.' },
+        { q: '인체유래물은행에서 받은 검체로 연구하는 경우 생명윤리위원회에 심의를 받을 필요가 없다.', a: 'X', exp: '마찬가지로 인체유래물 연구로서 심의 또는 심의면제 확인 절차를 밟아야 합니다.' },
+        { q: '선배가 조사한 설문조사 결과를 분석하는 2차 연구인 경우 생명윤리위원회의 심의를 받을 필요가 없다.', a: 'X', exp: '기존 자료를 이용하는 2차 연구도 연구의 목적이 변경되었으므로 심의 대상입니다.' },
+        { q: '예비조사(pilot study)는 본 연구(main study)에 활용되는 경우에도 생명윤리위원회에 심의를 받을 필요가 없다.', a: 'X', exp: '인간을 대상으로 하는 모든 예비조사는 본 연구와 별개로 또는 포함하여 심의 대상입니다.' },
+        { q: '생명윤리위원회 심의면제에 대한 판단은 연구자의 몫이다.', a: 'X', exp: '심의면제 판단은 연구자가 임의로 할 수 없으며, 반드시 IRB 위원회가 결정합니다.' },
+        { q: '“기관생명윤리위원회(IRB)”는 연구자를 보호하는 데 설립 목적이 있다.', a: 'X', exp: 'IRB의 설립 목적은 연구자가 아닌 \'연구대상자의 권리와 안전을 보호\'하는 데 있습니다.' },
+        { q: '1964년 세계의사회가 제정한 인간을 대상으로 하는 의학연구에 있어서 윤리 원칙은 벨몬트 보고서이다.', a: 'X', exp: '1964년 세계의사회가 제정한 것은 헬싱키 선언입니다. (벨몬트 보고서는 1979년)' },
+        { q: '벨몬트 보고서의 윤리원칙 중 연구대상자 동의 획득의 근거가 되는 원칙은 인간존중이다.', a: 'O', exp: '인간존중(자율성 존중) 원칙이 자발적 동의의 근거가 됩니다.' },
+        { q: '동일한 연구에 참여하는 연구대상자가 직면하는 위험은 모두 동일하다.', a: 'X', exp: '대상자의 건강상태, 연령 등 취약성에 따라 체감하는 위험의 정도는 다릅니다.' },
+        { q: '생명윤리위원회에 제출하는 연구계획서는 학위청구논문계획서와 동일하다.', a: 'X', exp: 'IRB 심의용 연구계획서는 대상자 보호와 윤리적 측면을 강조한 별도의 서식입니다.' },
+        { q: '생명윤리위원회에서는 연구계획서의 윤리적 타당성만을 검토한다.', a: 'X', exp: '윤리적 타당성뿐만 아니라 과학적 타당성(연구 설계 등)도 함께 검토합니다.' },
+        { q: '연구를 진행하다가 계획서 내용을 변경하는 경우 연구가 종료된 후 변경사항을 생명윤리위원회에 보고한다.', a: 'X', exp: '변경사항을 적용하기 전에 반드시 사전 변경심의를 승인받아야 합니다.' },
+        { q: '연구계획서 외에 자료수집도구(예: 설문지)도 생명윤리위원회 심의대상이 된다.', a: 'O', exp: '설문지, 면담지, 모집문건 등 대상자에게 제공되는 모든 자료가 심의 대상입니다.' },
+        { q: '생명윤리위원회에 심의를 신청하는 경우 연구책임자의 연구윤리 교육이수증이 필요하다.', a: 'O', exp: '연구책임자의 교육 이수는 필수 요건입니다.' },
+        { q: '생명윤리위원회에 심의를 신청하는 경우 공동연구자의 연구윤리 교육이수증이 필요하다.', a: 'O', exp: '공동연구자 및 연구담당자 모두 윤리 교육 이수증을 제출해야 합니다.' },
+        { q: '연구대상자 모집문건에는 대상자 참여를 독려하기 위해 연구 중재가 매우 효과적임을 강조한다.', a: 'X', exp: '강압이나 부당한 유인이 될 수 있으므로 효과를 과장하거나 확신하는 표현을 쓰면 안 됩니다.' },
+        { q: '연구대상자 모집문건에는 연구대상자가 잘 알 수 있도록 참여에 따른 구체적인 보상액수를 기술한다.', a: 'O', exp: '보상 내용과 액수를 투명하게 기술해야 합니다.' },
+        { q: '연구대상자 모집문건에는 연구참여에 따른 기대되는 이익을 기술할 수 있다.', a: 'O', exp: '기대되는 이익과 잠재적 위험을 모두 기술해야 합니다.' },
+        { q: '연구대상자에게는 가능한 교통비를 많이 지불하도록 한다.', a: 'X', exp: '과도한 보상은 자발적 참여를 방해하는 부당한 유인이 되므로 적정 수준을 유지해야 합니다.' },
+        { q: '생명윤리위원회에서 대학원생 학위논문 계획서를 심사하는 경우 지도교수가 생명윤리위원회 위원으로 참여한다.', a: 'X', exp: '이해상충(Conflict of Interest)에 해당하므로 해당 심의에서 제척되어야 합니다.' },
+        { q: '“연구를 진행하다가 연구책임자의 전화번호가 변경된 경우”에도 생명윤리위원회에 변경심의신청을 해야 한다.', a: 'O', exp: '대상자 연락처 등 사소한 변경이라도 동의서 내용이 바뀌므로 변경심의를 받아야 합니다.' },
+        { q: '연구계획서에 따라 연구가 종료된 경우 IRB에 종료 심의를 요청한다.', a: 'O', exp: '연구 종료 시 종료보고를 제출하여 위원회의 심의(확인)를 받아야 합니다.' },
+        { q: '연구를 진행하다가 1년이 경과한 경우에는 지속심의를 받아야 한다.', a: 'O', exp: '통상적으로 1년마다 지속심의를 통해 연구 진행 상황을 점검받아야 합니다.' },
+        { q: '생명윤리위원회의 승인통보서는 받은 후 3년간 보관한다.', a: 'X', exp: '승인통보서 및 관련 기록은 연구가 [종료된 후] 3년간 보관해야 합니다.' },
+
+        // --- 일반적인 생명윤리/IRB 핵심 예상문제 10문제 ---
+        { q: '아동, 임산부, 수감자 등 취약한 환경의 연구대상자를 포함하는 연구는 생명윤리위원회의 심의를 면제받을 수 있다.', a: 'X', exp: '취약한 대상자가 포함된 연구는 추가적인 보호장치가 필요하므로 심의 면제 대상이 될 수 없습니다.' },
+        { q: '연구대상자 설명문에는 연구 참여에 따른 잠재적 위험뿐만 아니라, 전혀 예견할 수 없는 부작용이 발생할 수 있음도 명시해야 한다.', a: 'O', exp: '알려진 위험 외에도 예측 불가능한 위험이나 불편감이 있을 수 있음을 고지해야 합니다.' },
+        { q: '연구 진행 중 대상자에게 예상하지 못한 중대한 이상반응이 발생한 경우, 정기 지속심의 때까지 기다렸다가 일괄 보고하면 된다.', a: 'X', exp: '중대한 이상반응(부작용) 발생 시에는 지체 없이 신속하게 위원회에 보고해야 합니다.' },
+        { q: '연구대상자가 연구 참여 도중 동의를 철회한 경우, 원칙적으로 그 시점까지 수집된 해당 대상자의 개인정보 및 관련 데이터를 폐기해야 한다.', a: 'O', exp: '동의 철회 시 대상자의 데이터는 파기하는 것이 원칙이며, 동의서에 그 처리 방안을 명시해야 합니다.' },
+        { q: '연구비 후원기관이 자사 제품에 유리한 방향으로 연구 데이터 수정을 은연중에 요구할 가능성이 있는 경우, 이는 잠재적 이해상충(Conflict of Interest)에 해당한다.', a: 'O', exp: '재정적 이해관계가 연구의 객관성이나 대상자 보호에 영향을 미칠 수 있는 전형적인 이해상충 상황입니다.' },
+        { q: '일반적으로 대중에게 완전히 공개된 관찰 가능한 행동을 연구하는 경우, 대상자를 특정할 수 없다면 심의 면제 대상이 될 수 있다.', a: 'O', exp: '공개된 장소에서의 단순 관찰 연구로 식별 정보가 수집되지 않으면 위원회 확인 후 면제가 가능합니다.' },
+        { q: '연구 목적을 미리 알리면 결과가 왜곡될 우려가 있어 대상자에게 정보를 숨기거나 속이는 기만(Deception) 연구는 어떠한 경우에도 IRB 승인을 받을 수 없다.', a: 'X', exp: '과학적 가치가 높고 다른 대안이 없으며, 사후 설명(Debriefing) 절차 등의 보호 대책이 마련되어 있다면 예외적으로 승인될 수 있습니다.' },
+        { q: '수집된 연구 데이터를 USB나 외장하드에 저장할 때는 대상자의 사생활 보호를 위해 반드시 암호화하거나 잠금장치가 있는 곳에 보관해야 한다.', a: 'O', exp: '물리적/전자적 데이터 보안 절차는 심의 시 비과학계 위원이 철저히 확인하는 필수 항목입니다.' },
+        { q: '연구 참여에 대한 금전적 보상은 대상자의 중도 탈락을 막기 위해 연구가 모두 종료된 시점에 한꺼번에 전액 지급하는 것이 윤리적이다.', a: 'X', exp: '완료를 조건으로 한 전액 지급은 대상자에게 부당한 강압으로 작용할 수 있어 금지되며, 참여 정도에 비례하여 지급해야 합니다.' },
+        { q: '생명윤리위원회 모의심의에서 과학계 위원은 연구 목적을 달성하기 위해 대상자에게 가해지는 위험(Risk)이 이득(Benefit)보다 크더라도 무조건 승인해야 한다.', a: 'X', exp: '과학적 가치가 아무리 높아도, 위험이 이득에 비해 합리적인 수준으로 최소화되지 않았다면 승인할 수 없습니다.' }
+    ];
+
+    let questionQueue = [];
+    let currentQuestion = null;
+
+    function shuffle(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [array[i], array[j]] = [array[j], array[i]];
+        }
+    }
+
+    function startQuiz() {
+        // UI 초기화 (강제로 style을 설정하여 이전 상태 덮어쓰기)
+        document.getElementById('completion').style.display = 'none';
+        document.getElementById('feedback').style.display = 'none';
+        
+        document.getElementById('header').style.display = 'flex';
+        document.getElementById('card').style.display = 'flex';
+        document.getElementById('ox-buttons').style.display = 'flex';
+
+        // 큐 초기화 및 섞기
+        questionQueue = [...originalQuestions];
+        shuffle(questionQueue);
+        
+        showNextQuestion();
+    }
+
+    function showNextQuestion() {
+        if (questionQueue.length === 0) {
+            showCompletion();
+            return;
+        }
+        
+        currentQuestion = questionQueue[0];
+        
+        document.getElementById('card').innerText = currentQuestion.q;
+        document.getElementById('counter').innerText = `남은 문제: ${questionQueue.length}개`;
+        
+        document.getElementById('ox-buttons').style.display = 'flex';
+        document.getElementById('feedback').style.display = 'none';
+    }
+
+    function checkAnswer(userAnswer) {
+        const isCorrect = userAnswer === currentQuestion.a;
+        const feedbackDiv = document.getElementById('feedback');
+        const resultText = document.getElementById('result-text');
+        const expText = document.getElementById('explanation');
+        
+        document.getElementById('ox-buttons').style.display = 'none';
+        
+        if (isCorrect) {
+            resultText.innerText = "⭕ 정답입니다!";
+            resultText.className = "correct";
+            expText.innerText = currentQuestion.exp;
+            questionQueue.shift(); // 정답이면 제거
+        } else {
+            resultText.innerText = `❌ 오답입니다! (정답: ${currentQuestion.a})`;
+            resultText.className = "incorrect";
+            expText.innerText = currentQuestion.exp;
+            
+            // 오답이면 큐 맨 뒤로 다시 보냄
+            const wrongQuestion = questionQueue.shift();
+            questionQueue.push(wrongQuestion);
+        }
+        
+        feedbackDiv.style.display = 'flex';
+    }
+
+    function nextQuestion() {
+        showNextQuestion();
+    }
+
+    function showCompletion() {
+        document.getElementById('header').style.display = 'none';
+        document.getElementById('card').style.display = 'none';
+        document.getElementById('ox-buttons').style.display = 'none';
+        document.getElementById('feedback').style.display = 'none';
+        document.getElementById('completion').style.display = 'flex';
+    }
+
+    // 앱 시작
+    window.onload = startQuiz;
+</script>
+
+</body>
+</html>
